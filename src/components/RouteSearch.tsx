@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
+import { MapPin, Navigation, Clock, Route, History, Trash2, X, ArrowRight } from 'lucide-react';
 
 interface Location {
   display_name: string;
@@ -42,16 +43,54 @@ interface SavedRoute {
 // Custom marker icons
 const startIcon = L.divIcon({
   className: 'custom-div-icon',
-  html: '<div style="background-color: white; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #2196F3;"></div>',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6]
+  html: `
+    <div style="
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <div style="
+        width: 8px;
+        height: 8px;
+        background-color: white;
+        border-radius: 50%;
+      "></div>
+    </div>
+  `,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
 });
 
 const endIcon = L.divIcon({
   className: 'custom-div-icon',
-  html: '<div style="background-color: #FF4444; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #CC0000;"></div>',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6]
+  html: `
+    <div style="
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <div style="
+        width: 8px;
+        height: 8px;
+        background-color: white;
+        border-radius: 50%;
+      "></div>
+    </div>
+  `,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
 });
 
 export default function RouteSearch() {
@@ -91,7 +130,7 @@ export default function RouteSearch() {
       timestamp: Date.now()
     };
 
-    const updatedRoutes = [newRoute, ...savedRoutes].slice(0, 10); // Keep only last 10 routes
+    const updatedRoutes = [newRoute, ...savedRoutes].slice(0, 10);
     setSavedRoutes(updatedRoutes);
     localStorage.setItem('savedRoutes', JSON.stringify(updatedRoutes));
   };
@@ -139,13 +178,7 @@ export default function RouteSearch() {
       try {
         const response = await axios.get(
           'https://data.cityofnewyork.us/resource/qgea-i56i.json',
-          {
-            params: {
-              $limit: 2000,
-              $where: "latitude IS NOT NULL AND longitude IS NOT NULL",
-              $select: "latitude,longitude,ofns_desc"
-            }
-          }
+          {}
         );
         setCrimeData(response.data);
       } catch (error) {
@@ -318,19 +351,21 @@ export default function RouteSearch() {
       // 3. Draw it
       setRouteInfo({ duration: chosen.duration, distance: chosen.distance });
       const color = transportMode === 'walking'
-        ? (routeType === 'safest' ? '#4CAF50' : '#2196F3')
+        ? (routeType === 'safest' ? '#10b981' : '#3b82f6')
         : transportMode === 'cycling'
-        ? (routeType === 'safest' ? '#FF9800' : '#FF5722')
-        : (routeType === 'safest' ? '#9C27B0' : '#673AB7');
+        ? (routeType === 'safest' ? '#f59e0b' : '#f97316')
+        : (routeType === 'safest' ? '#8b5cf6' : '#6366f1');
 
       currentRouteRef.current = L.polyline(chosen.coords, {
         color,
-        weight: routeType === 'safest' ? 5 : 4,
-        opacity: routeType === 'safest' ? 0.8 : 0.7,
-        dashArray: routeType === 'safest' ? '5,10' : undefined
+        weight: 6,
+        opacity: 0.8,
+        dashArray: routeType === 'safest' ? '10,5' : undefined,
+        lineCap: 'round',
+        lineJoin: 'round'
       }).addTo(map);
 
-      map.fitBounds(currentRouteRef.current.getBounds());
+      map.fitBounds(currentRouteRef.current.getBounds(), { padding: [20, 20] });
 
       // Save the route after successful calculation
       saveRoute();
@@ -343,166 +378,246 @@ export default function RouteSearch() {
     }
   };
 
+  const getTransportIcon = (mode: TransportMode) => {
+    switch (mode) {
+      case 'walking': return '🚶‍♂️';
+      case 'cycling': return '🚴‍♂️';
+      case 'driving': return '🚗';
+    }
+  };
+
+  const getRouteTypeColor = (type: 'fastest' | 'safest') => {
+    return type === 'fastest' ? 'from-blue-500 to-cyan-500' : 'from-green-500 to-emerald-500';
+  };
+
   return (
-    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-xl w-[90%] max-w-sm border border-gray-100">
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-gray-800">Route Planning</h2>
-          <div className="flex items-center gap-2">
+    <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] sm:w-[90%] md:max-w-lg">
+      {/* Main Panel */}
+      <div className="bg-white/95 backdrop-blur-xl p-4 sm:p-6 rounded-2xl shadow-2xl border border-white/20">
+        <div className="space-y-4 sm:space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+                <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Route Planner</h2>
+            </div>
             <button
               onClick={() => setShowSavedRoutes(!showSavedRoutes)}
-              className="p-1.5 text-sm border rounded-lg text-gray-700 bg-white shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200 text-gray-700 text-xs sm:text-sm font-medium"
             >
-              {showSavedRoutes ? 'Hide History' : 'Show History'}
+              <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              History
             </button>
-            <select
-              value={transportMode}
-              onChange={(e) => setTransportMode(e.target.value as TransportMode)}
-              className="p-1.5 text-sm border rounded-lg text-gray-700 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="walking">🚶 Walking</option>
-              <option value="cycling">🚲 Cycling</option>
-              <option value="driving">🚗 Driving</option>
-            </select>
-            <select
-              value={routeType}
-              onChange={(e) => setRouteType(e.target.value as 'fastest' | 'safest')}
-              className="p-1.5 text-sm border rounded-lg text-gray-700 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="fastest">Fastest</option>
-              <option value="safest">Safest</option>
-            </select>
           </div>
-        </div>
 
-        {/* Saved Routes Dropdown */}
-        {showSavedRoutes && savedRoutes.length > 0 && (
-          <div className="bg-white rounded-lg shadow-lg border border-gray-100 max-h-48 overflow-y-auto">
+          {/* Transport Mode & Route Type */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Transport</label>
+              <select
+                value={transportMode}
+                onChange={(e) => setTransportMode(e.target.value as TransportMode)}
+                className="w-full p-2 sm:p-3 text-sm border border-gray-200 rounded-xl text-gray-700 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              >
+                <option value="walking">🚶‍♂️ Walking</option>
+                <option value="cycling">🚴‍♂️ Cycling</option>
+                <option value="driving">🚗 Driving</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Priority</label>
+              <select
+                value={routeType}
+                onChange={(e) => setRouteType(e.target.value as 'fastest' | 'safest')}
+                className="w-full p-2 sm:p-3 text-sm border border-gray-200 rounded-xl text-gray-700 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              >
+                <option value="fastest">⚡ Fastest</option>
+                <option value="safest">🛡️ Safest</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Location Inputs */}
+          <div className="space-y-3 sm:space-y-4">
+            {/* Start Location */}
+            <div className="relative">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">From</label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
+                </div>
+                <input
+                  type="text"
+                  value={startLocation}
+                  onChange={(e) => {
+                    setStartLocation(e.target.value);
+                    debouncedSearch(e.target.value, setStartSuggestions);
+                  }}
+                  placeholder="Enter starting location"
+                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-sm border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                />
+              </div>
+              {startSuggestions.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 sm:mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-40 sm:max-h-48 overflow-y-auto">
+                  {startSuggestions.map((location, index) => (
+                    <div
+                      key={index}
+                      className="p-2 sm:p-3 text-sm hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-50 last:border-b-0 flex items-center gap-2 sm:gap-3"
+                      onClick={() => handleLocationSelect(location, true)}
+                    >
+                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{location.display_name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* End Location */}
+            <div className="relative">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">To</label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
+                </div>
+                <input
+                  type="text"
+                  value={endLocation}
+                  onChange={(e) => {
+                    setEndLocation(e.target.value);
+                    debouncedSearch(e.target.value, setEndSuggestions);
+                  }}
+                  placeholder="Enter destination"
+                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-sm border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                />
+              </div>
+              {endSuggestions.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 sm:mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-40 sm:max-h-48 overflow-y-auto">
+                  {endSuggestions.map((location, index) => (
+                    <div
+                      key={index}
+                      className="p-2 sm:p-3 text-sm hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-50 last:border-b-0 flex items-center gap-2 sm:gap-3"
+                      onClick={() => handleLocationSelect(location, false)}
+                    >
+                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{location.display_name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Route Info */}
+          {routeInfo && (
+            <div className={`bg-gradient-to-r ${getRouteTypeColor(routeType)} p-3 sm:p-4 rounded-xl text-white`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="text-xl sm:text-2xl">{getTransportIcon(transportMode)}</div>
+                  <div>
+                    <p className="text-white/80 text-xs sm:text-sm font-medium">
+                      {routeType === 'fastest' ? 'Fastest Route' : 'Safest Route'}
+                    </p>
+                    <div className="flex items-center gap-3 sm:gap-4 mt-0.5 sm:mt-1">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="text-sm sm:font-semibold">{formatDuration(routeInfo.duration)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Route className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="text-sm sm:font-semibold">{formatDistance(routeInfo.distance)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Find Route Button */}
+          <button
+            onClick={calculateRoute}
+            disabled={!startLocation || !endLocation || isCalculating}
+            className="w-full py-3 sm:py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none flex items-center justify-center gap-2 sm:gap-3"
+          >
+            {isCalculating ? (
+              <>
+                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Calculating Route...</span>
+              </>
+            ) : (
+              <>
+                <Navigation className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Find Best Route</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Saved Routes Panel */}
+      {showSavedRoutes && savedRoutes.length > 0 && (
+        <div className="mt-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 max-h-80">
+          <div className="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="font-semibold text-sm sm:text-base text-gray-800 flex items-center gap-2">
+              <History className="w-4 h-4 sm:w-5 sm:h-5" />
+              Recent Routes
+            </h3>
+            <button
+              onClick={() => setShowSavedRoutes(false)}
+              className="p-1 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+            >
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
+            </button>
+          </div>
+          <div className="overflow-y-auto max-h-64">
             {savedRoutes.map((route) => (
               <div
                 key={route.timestamp}
-                className="p-2 text-sm border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+                className="p-3 sm:p-4 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors duration-200"
               >
-                <div className="flex justify-between items-center">
-                  <div className="flex-1 cursor-pointer" onClick={() => loadRoute(route)}>
-                    <div className="font-medium text-gray-800">{route.startLocation}</div>
-                    <div className="text-gray-600">→ {route.endLocation}</div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(route.timestamp).toLocaleString()} • {route.transportMode} • {route.routeType}
+                <div className="flex items-center justify-between">
+                  <div 
+                    className="flex-1 cursor-pointer space-y-1"
+                    onClick={() => loadRoute(route)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-base sm:text-lg">{getTransportIcon(route.transportMode)}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium text-white bg-gradient-to-r ${getRouteTypeColor(route.routeType)}`}>
+                        {route.routeType}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                        <span className="text-gray-800 font-medium truncate">{route.startLocation}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <ArrowRight className="w-3 h-3 text-gray-400 ml-0.5 flex-shrink-0" />
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                        <span className="text-gray-800 font-medium truncate">{route.endLocation}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {new Date(route.timestamp).toLocaleDateString()} at {new Date(route.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                   <button
                     onClick={() => deleteRoute(route.timestamp)}
-                    className="p-1 text-gray-400 hover:text-red-500"
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors duration-200 flex-shrink-0"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             ))}
           </div>
-        )}
-
-        {/* Start Location */}
-        <div className="relative">
-          <div className="relative">
-            <input
-              type="text"
-              value={startLocation}
-              onChange={(e) => {
-                setStartLocation(e.target.value);
-                debouncedSearch(e.target.value, setStartSuggestions);
-              }}
-              placeholder="Start location"
-              className="w-full p-2 text-sm border rounded-lg text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-            />
-            {startSuggestions.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 max-h-48 overflow-y-auto">
-                {startSuggestions.map((location, index) => (
-                  <div
-                    key={index}
-                    className="p-2 text-sm hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-100 last:border-b-0"
-                    onClick={() => handleLocationSelect(location, true)}
-                  >
-                    {location.display_name}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
-
-        {/* End Location */}
-        <div className="relative">
-          <div className="relative">
-            <input
-              type="text"
-              value={endLocation}
-              onChange={(e) => {
-                setEndLocation(e.target.value);
-                debouncedSearch(e.target.value, setEndSuggestions);
-              }}
-              placeholder="End location"
-              className="w-full p-2 text-sm border rounded-lg text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-            />
-            {endSuggestions.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 max-h-48 overflow-y-auto">
-                {endSuggestions.map((location, index) => (
-                  <div
-                    key={index}
-                    className="p-2 text-sm hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-100 last:border-b-0"
-                    onClick={() => handleLocationSelect(location, false)}
-                  >
-                    {location.display_name}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Route Info */}
-        {routeInfo && (
-          <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
-            <div className="flex justify-between items-center text-sm">
-              <div>
-                <p className="text-gray-600">Time</p>
-                <p className="font-semibold text-gray-800">{formatDuration(routeInfo.duration)}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Distance</p>
-                <p className="font-semibold text-gray-800">{formatDistance(routeInfo.distance)}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Find Route Button */}
-        <button
-          onClick={calculateRoute}
-          disabled={!startLocation || !endLocation || isCalculating}
-          className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 shadow-md hover:shadow-lg flex items-center justify-center space-x-2"
-        >
-          {isCalculating ? (
-            <>
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>Calculating...</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              <span>Find Route</span>
-            </>
-          )}
-        </button>
-      </div>
+      )}
     </div>
   );
 } 
