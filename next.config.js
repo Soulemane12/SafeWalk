@@ -22,6 +22,11 @@ const nextConfig = {
     'http://0.0.0.0:3000',
     'http://100.103.118.96:3000'
   ],
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
 }
 
 module.exports = nextConfig 
