@@ -106,6 +106,7 @@ export default function RouteSearch() {
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
   const [showSavedRoutes, setShowSavedRoutes] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const currentRouteRef = useRef<L.Polyline | null>(null);
   const startMarkerRef = useRef<L.Marker | null>(null);
   const endMarkerRef = useRef<L.Marker | null>(null);
@@ -391,27 +392,72 @@ export default function RouteSearch() {
   };
 
   return (
-    <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] sm:w-[90%] md:max-w-lg">
+    <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] sm:w-[90%] md:max-w-lg transition-all duration-300 ${isMinimized ? '' : ''}`}>
       {/* Main Panel */}
-      <div className="bg-white/95 backdrop-blur-xl p-4 sm:p-6 rounded-2xl shadow-2xl border border-white/20">
-        <div className="space-y-4 sm:space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-                <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Route Planner</h2>
+      <div className={`bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 ${isMinimized ? 'p-2' : 'p-4 sm:p-6'}`}>
+        {/* Always visible header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+              <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Route Planner</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isMinimized && (
+              <button
+                onClick={() => setShowSavedRoutes(!showSavedRoutes)}
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200 text-gray-700 text-xs sm:text-sm font-medium"
+              >
+                <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                History
+              </button>
+            )}
             <button
-              onClick={() => setShowSavedRoutes(!showSavedRoutes)}
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200 text-gray-700 text-xs sm:text-sm font-medium"
+              onClick={() => setIsMinimized(!isMinimized)}
+              className="flex items-center justify-center w-7 h-7 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200 text-gray-700"
             >
-              <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              History
+              {isMinimized ? <ArrowRight className="w-4 h-4 rotate-90" /> : <ArrowRight className="w-4 h-4 -rotate-90" />}
             </button>
           </div>
+        </div>
 
+        {/* Minimized view */}
+        {isMinimized && (
+          <div className="mt-3 flex items-center gap-2">
+            <select
+              value={transportMode}
+              onChange={(e) => setTransportMode(e.target.value as TransportMode)}
+              className="flex-1 p-2 text-sm border border-gray-200 rounded-xl text-gray-700 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            >
+              <option value="walking">🚶‍♂️ Walking</option>
+              <option value="cycling">🚴‍♂️ Cycling</option>
+              <option value="driving">🚗 Driving</option>
+            </select>
+            <select
+              value={routeType}
+              onChange={(e) => setRouteType(e.target.value as 'fastest' | 'safest')}
+              className="flex-1 p-2 text-sm border border-gray-200 rounded-xl text-gray-700 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            >
+              <option value="fastest">⚡ Fastest</option>
+              <option value="safest">🛡️ Safest</option>
+            </select>
+            <button
+              onClick={calculateRoute}
+              disabled={!startLocation || !endLocation || isCalculating}
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none flex items-center justify-center gap-2"
+            >
+              {isCalculating ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <Navigation className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Full view */}
+        <div className={`space-y-4 sm:space-y-6 ${isMinimized ? 'hidden' : 'mt-4'}`}>
           {/* Transport Mode & Route Type */}
           <div className="grid grid-cols-2 gap-3">
             <div>
