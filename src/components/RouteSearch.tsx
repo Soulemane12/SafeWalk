@@ -131,9 +131,19 @@ export default function RouteSearch() {
       timestamp: Date.now()
     };
 
-    const updatedRoutes = [newRoute, ...savedRoutes].slice(0, 10);
-    setSavedRoutes(updatedRoutes);
-    localStorage.setItem('savedRoutes', JSON.stringify(updatedRoutes));
+    // Check for duplicates (same start, end, transport mode, and route type)
+    const isDuplicate = savedRoutes.some(route => 
+      route.startLocation === newRoute.startLocation &&
+      route.endLocation === newRoute.endLocation &&
+      route.transportMode === newRoute.transportMode &&
+      route.routeType === newRoute.routeType
+    );
+
+    if (!isDuplicate) {
+      const updatedRoutes = [newRoute, ...savedRoutes].slice(0, 10);
+      setSavedRoutes(updatedRoutes);
+      localStorage.setItem('savedRoutes', JSON.stringify(updatedRoutes));
+    }
   };
 
   // Load a saved route
@@ -505,6 +515,30 @@ export default function RouteSearch() {
 
           {/* Location Inputs */}
           <div className="space-y-3 sm:space-y-4">
+            {/* Quick Select Locations */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setStartLocation("East 86th Street & Lexington Avenue at Southeast Corner, Lexington Avenue, Carnegie Hill, Manhattan Community Board 8, Manhattan, New York County, New York, 10035, United States");
+                  setEndLocation("116th Street, West 116th Street, Manhattan Community Board 10, Manhattan, New York County, New York, 10026, United States");
+                }}
+                className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200 text-gray-700 font-medium flex items-center justify-center gap-2"
+              >
+                <MapPin className="w-4 h-4" />
+                Test Route: 86th to 116th
+              </button>
+              <button
+                onClick={() => {
+                  setStartLocation("Yankee Stadium, 1, East 161st Street, The Bronx, Bronx County, New York, 10451, United States");
+                  setEndLocation("Lincoln Hospital, 234, East 149th Street, The Bronx, Bronx County, New York, 10451, United States");
+                }}
+                className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200 text-gray-700 font-medium flex items-center justify-center gap-2"
+              >
+                <MapPin className="w-4 h-4" />
+                Test Route: Yankee Stadium to Lincoln Hospital
+              </button>
+            </div>
+
             {/* Start Location */}
             <div className="relative">
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">From</label>
@@ -627,30 +661,44 @@ export default function RouteSearch() {
 
       {/* Saved Routes Panel */}
       {showSavedRoutes && savedRoutes.length > 0 && (
-        <div 
-          className="mt-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 max-h-[80vh] flex flex-col"
-          onWheel={(e) => {
-            e.stopPropagation();
-          }}
-        >
+        <div className="mt-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 max-h-[80vh] flex flex-col">
           <div className="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
             <h3 className="font-semibold text-sm sm:text-base text-gray-800 flex items-center gap-2">
               <History className="w-4 h-4 sm:w-5 sm:h-5" />
               Recent Routes
             </h3>
-            <button
-              onClick={() => setShowSavedRoutes(false)}
-              className="p-1 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-            >
-              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const container = document.querySelector('.saved-routes-container');
+                  if (container) {
+                    container.scrollBy({ top: -100, behavior: 'smooth' });
+                  }
+                }}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              >
+                <ArrowRight className="w-4 h-4 text-gray-500 -rotate-90" />
+              </button>
+              <button
+                onClick={() => {
+                  const container = document.querySelector('.saved-routes-container');
+                  if (container) {
+                    container.scrollBy({ top: 100, behavior: 'smooth' });
+                  }
+                }}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              >
+                <ArrowRight className="w-4 h-4 text-gray-500 rotate-90" />
+              </button>
+              <button
+                onClick={() => setShowSavedRoutes(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              >
+                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
+              </button>
+            </div>
           </div>
-          <div 
-            className="overflow-y-auto flex-1"
-            onWheel={(e) => {
-              e.stopPropagation();
-            }}
-          >
+          <div className="overflow-y-auto flex-1 saved-routes-container" onWheel={(e) => e.stopPropagation()}>
             {savedRoutes.map((route) => (
               <div
                 key={route.timestamp}
