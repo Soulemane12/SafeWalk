@@ -36,7 +36,6 @@ export default function CrimeHeatmap() {
           'https://data.cityofnewyork.us/resource/qgea-i56i.json',
           {
             params: {
-              $limit: 2000,
               $where: "latitude IS NOT NULL AND longitude IS NOT NULL",
               $select: "latitude,longitude,ofns_desc,cmplnt_fr_dt,boro_nm"
             }

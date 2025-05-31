@@ -627,8 +627,13 @@ export default function RouteSearch() {
 
       {/* Saved Routes Panel */}
       {showSavedRoutes && savedRoutes.length > 0 && (
-        <div className="mt-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 max-h-80">
-          <div className="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between">
+        <div 
+          className="mt-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 max-h-[80vh] flex flex-col"
+          onWheel={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <div className="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
             <h3 className="font-semibold text-sm sm:text-base text-gray-800 flex items-center gap-2">
               <History className="w-4 h-4 sm:w-5 sm:h-5" />
               Recent Routes
@@ -640,7 +645,12 @@ export default function RouteSearch() {
               <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
             </button>
           </div>
-          <div className="overflow-y-auto max-h-64">
+          <div 
+            className="overflow-y-auto flex-1"
+            onWheel={(e) => {
+              e.stopPropagation();
+            }}
+          >
             {savedRoutes.map((route) => (
               <div
                 key={route.timestamp}
