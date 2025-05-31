@@ -209,7 +209,10 @@ export default function RouteSearch() {
             q: query,
             format: 'json',
             limit: 5,
-            addressdetails: 1
+            addressdetails: 1,
+            countrycodes: 'us', // Focus on US locations
+            viewbox: '-74.5,40.4,-73.5,41.0', // NYC bounding box
+            bounded: 1
           },
           headers: {
             'Accept-Language': 'en'
@@ -224,6 +227,10 @@ export default function RouteSearch() {
   };
 
   const debouncedSearch = debounce(async (query: string, setSuggestions: (locations: Location[]) => void) => {
+    if (query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
     const results = await searchLocations(query);
     setSuggestions(results);
   }, 300);
@@ -238,6 +245,17 @@ export default function RouteSearch() {
       setEndLocation(location.display_name);
       setEndSuggestions([]);
     }
+  };
+
+  // Handle input blur with delay to allow for suggestion clicks
+  const handleInputBlur = (isStart: boolean) => {
+    setTimeout(() => {
+      if (isStart) {
+        setStartSuggestions([]);
+      } else {
+        setEndSuggestions([]);
+      }
+    }, 200);
   };
 
   // Calculate crime density for a point
@@ -501,6 +519,7 @@ export default function RouteSearch() {
                     setStartLocation(e.target.value);
                     debouncedSearch(e.target.value, setStartSuggestions);
                   }}
+                  onBlur={() => handleInputBlur(true)}
                   placeholder="Enter starting location"
                   className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-sm border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
                 />
@@ -510,11 +529,12 @@ export default function RouteSearch() {
                   {startSuggestions.map((location, index) => (
                     <div
                       key={index}
-                      className="p-2 sm:p-3 text-sm hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-50 last:border-b-0 flex items-center gap-2 sm:gap-3"
+                      className="p-2 sm:p-3 text-sm hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-50 last:border-b-0 flex items-center gap-2 sm:gap-3 group"
                       onClick={() => handleLocationSelect(location, true)}
+                      onMouseDown={(e) => e.preventDefault()} // Prevent blur
                     >
-                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
-                      <span className="truncate">{location.display_name}</span>
+                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition-colors duration-200" />
+                      <span className="truncate group-hover:text-blue-600 transition-colors duration-200">{location.display_name}</span>
                     </div>
                   ))}
                 </div>
@@ -535,6 +555,7 @@ export default function RouteSearch() {
                     setEndLocation(e.target.value);
                     debouncedSearch(e.target.value, setEndSuggestions);
                   }}
+                  onBlur={() => handleInputBlur(false)}
                   placeholder="Enter destination"
                   className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-sm border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
                 />
@@ -544,11 +565,12 @@ export default function RouteSearch() {
                   {endSuggestions.map((location, index) => (
                     <div
                       key={index}
-                      className="p-2 sm:p-3 text-sm hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-50 last:border-b-0 flex items-center gap-2 sm:gap-3"
+                      className="p-2 sm:p-3 text-sm hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-50 last:border-b-0 flex items-center gap-2 sm:gap-3 group"
                       onClick={() => handleLocationSelect(location, false)}
+                      onMouseDown={(e) => e.preventDefault()} // Prevent blur
                     >
-                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
-                      <span className="truncate">{location.display_name}</span>
+                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition-colors duration-200" />
+                      <span className="truncate group-hover:text-blue-600 transition-colors duration-200">{location.display_name}</span>
                     </div>
                   ))}
                 </div>

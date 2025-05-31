@@ -76,7 +76,8 @@ export default function CrimeHeatmap() {
             0.8: 'rgba(244, 165, 130, 0.6)',
             1.0: 'rgba(215, 25, 28, 0.7)'
           },
-          minOpacity: 0.2
+          minOpacity: 0.2,
+          pane: 'overlayPane' // Ensure heatmap is always on top of base map
         }).addTo(map);
 
         // Update heatmap on zoom
@@ -86,14 +87,19 @@ export default function CrimeHeatmap() {
               radius: getRadius(map.getZoom()),
               blur: 2
             });
+            initialHeatLayer.redraw(); // Force redraw to ensure visibility
           }
         };
 
         map.on('zoomend', updateHeatmap);
+        map.on('moveend', updateHeatmap); // Update on pan as well
 
         return () => {
           map.off('zoomend', updateHeatmap);
-          map.removeLayer(initialHeatLayer);
+          map.off('moveend', updateHeatmap);
+          if (initialHeatLayer) {
+            map.removeLayer(initialHeatLayer);
+          }
         };
       } catch (err) {
         console.error('Error fetching crime data:', err);
