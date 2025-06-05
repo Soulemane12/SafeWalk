@@ -16,6 +16,22 @@ export interface RouteAnalysis {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  annotations?: Array<{
+    type: string;
+    url_citation?: {
+      url: string;
+      title: string;
+      start_index: number;
+      end_index: number;
+    };
+  }>;
+}
+
+export interface UserLocation {
+  country?: string;
+  city?: string;
+  region?: string;
+  timezone?: string;
 }
 
 export class RouteAIService {
@@ -102,14 +118,23 @@ export class RouteAIService {
     });
   }
 
-  static async analyzeRoute(routeData: any, userQuestion: string): Promise<string> {
+  static async analyzeRoute(
+    routeData: any, 
+    userQuestion: string, 
+    useWebSearch: boolean = false,
+    userLocation?: UserLocation
+  ): Promise<{ response: string; annotations?: ChatMessage['annotations'] }> {
     if (!openai.apiKey) {
       console.warn('OpenAI API key is not configured');
-      return "I apologize, but I'm currently unable to analyze routes as the AI service is not properly configured. Please check your environment variables.";
+      return {
+        response: "I apologize, but I'm currently unable to analyze routes as the AI service is not properly configured. Please check your environment variables."
+      };
     }
 
     if (!routeData) {
-      return "I apologize, but I don't have any route data to analyze. Please select a route first.";
+      return {
+        response: "I apologize, but I don't have any route data to analyze. Please select a route first."
+      };
     }
 
     return this.retryWithBackoff(async () => {
@@ -120,7 +145,9 @@ export class RouteAIService {
         },
         body: JSON.stringify({
           message: userQuestion,
-          routeData
+          routeData,
+          useWebSearch,
+          userLocation
         }),
       });
 
@@ -133,14 +160,23 @@ export class RouteAIService {
       if (!data.response) {
         throw new Error('Invalid response format');
       }
-      return data.response;
+      return {
+        response: data.response,
+        annotations: data.annotations
+      };
     });
   }
 
-  public async chat(message: string): Promise<string> {
+  public async chat(
+    message: string,
+    useWebSearch: boolean = false,
+    userLocation?: UserLocation
+  ): Promise<{ response: string; annotations?: ChatMessage['annotations'] }> {
     if (!openai.apiKey) {
       console.warn('OpenAI API key is not configured');
-      return "I apologize, but I'm currently unable to chat as the AI service is not properly configured. Please check your environment variables.";
+      return {
+        response: "I apologize, but I'm currently unable to chat as the AI service is not properly configured. Please check your environment variables."
+      };
     }
 
     try {
@@ -154,6 +190,8 @@ export class RouteAIService {
         body: JSON.stringify({
           message,
           chatHistory: this.chatHistory,
+          useWebSearch,
+          userLocation
         }),
       });
 
@@ -168,8 +206,15 @@ export class RouteAIService {
       }
       
       const reply = data.response;
-      this.chatHistory.push({ role: 'assistant', content: reply });
-      return reply;
+      this.chatHistory.push({ 
+        role: 'assistant', 
+        content: reply,
+        annotations: data.annotations
+      });
+      return {
+        response: reply,
+        annotations: data.annotations
+      };
     } catch (error) {
       console.error('Error in chat:', error);
       throw error;

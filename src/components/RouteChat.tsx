@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RouteAIService } from '@/lib/ai-service';
+import { RouteAIService, UserLocation } from '@/lib/ai-service';
 
 interface RouteChatProps {
   routeData?: {
@@ -31,8 +31,22 @@ interface RouteChatProps {
   };
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  annotations?: Array<{
+    type: string;
+    url_citation?: {
+      url: string;
+      title: string;
+      start_index: number;
+      end_index: number;
+    };
+  }>;
+}
+
 export const RouteChat: React.FC<RouteChatProps> = ({ routeData }) => {
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
       content: routeData 
@@ -62,6 +76,8 @@ Once you select a route, I'll provide personalized safety recommendations!`
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [useWebSearch, setUseWebSearch] = useState(false);
+  const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
@@ -107,8 +123,17 @@ Once you select a route, I'll provide personalized safety recommendations!`
     setIsLoading(true);
 
     try {
-      const response = await RouteAIService.analyzeRoute(routeData, userMessage);
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      const { response, annotations } = await RouteAIService.analyzeRoute(
+        routeData, 
+        userMessage,
+        useWebSearch,
+        userLocation
+      );
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: response,
+        annotations
+      }]);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages(prev => [...prev, { 
@@ -118,6 +143,67 @@ Once you select a route, I'll provide personalized safety recommendations!`
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const renderMessageContent = (message: ChatMessage) => {
+    if (!message.annotations?.length) {
+      return message.content.split('\n').map((line, i) => (
+        <p key={i} className="mb-3 last:mb-0 text-base leading-relaxed">
+          {line}
+        </p>
+      ));
+    }
+
+    const content = message.content;
+    const annotations = message.annotations;
+    const elements: JSX.Element[] = [];
+    let lastIndex = 0;
+
+    annotations.forEach((annotation, index) => {
+      if (annotation.type === 'url_citation' && annotation.url_citation) {
+        const { start_index, end_index, url, title } = annotation.url_citation;
+        
+        // Add text before the citation
+        if (start_index > lastIndex) {
+          elements.push(
+            <span key={`text-${index}`}>
+              {content.slice(lastIndex, start_index)}
+            </span>
+          );
+        }
+
+        // Add the citation as a link
+        elements.push(
+          <a
+            key={`link-${index}`}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 underline"
+            title={title}
+          >
+            {content.slice(start_index, end_index)}
+          </a>
+        );
+
+        lastIndex = end_index;
+      }
+    });
+
+    // Add any remaining text
+    if (lastIndex < content.length) {
+      elements.push(
+        <span key="text-end">
+          {content.slice(lastIndex)}
+        </span>
+      );
+    }
+
+    return elements.map((element, i) => (
+      <p key={i} className="mb-3 last:mb-0 text-base leading-relaxed">
+        {element}
+      </p>
+    ));
   };
 
   return (
@@ -172,11 +258,7 @@ Once you select a route, I'll provide personalized safety recommendations!`
                 }`}
               >
                 <div className="prose prose-sm">
-                  {message.content.split('\n').map((line, i) => (
-                    <p key={i} className="mb-3 last:mb-0 text-base leading-relaxed">
-                      {line}
-                    </p>
-                  ))}
+                  {renderMessageContent(message)}
                 </div>
               </div>
             </div>
@@ -221,6 +303,17 @@ Once you select a route, I'll provide personalized safety recommendations!`
         )}
 
         <div className={`p-4 border-t bg-white transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={useWebSearch}
+                onChange={(e) => setUseWebSearch(e.target.checked)}
+                className="w-4 h-4 text-blue-500 rounded focus:ring-blue-500"
+              />
+              Enable web search
+            </label>
+          </div>
           <div className="flex gap-3">
             <input
               type="text"

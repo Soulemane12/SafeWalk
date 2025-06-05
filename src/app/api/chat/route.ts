@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { message, routeData, isGeneratingQuestions } = await req.json();
+    const { message, routeData, isGeneratingQuestions, useWebSearch, userLocation } = await req.json();
 
     if (!routeData) {
       return NextResponse.json(
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: useWebSearch ? "gpt-4o-search-preview" : "gpt-4",
       messages: [
         {
           role: "system",
@@ -100,15 +100,32 @@ export async function POST(req: Request) {
         }
       ],
       max_tokens: 1000,
-      temperature: 0.7,
+      ...(useWebSearch ? {
+        web_search_options: {
+          search_context_size: "medium",
+          ...(userLocation && {
+            user_location: {
+              type: "approximate",
+              approximate: userLocation
+            }
+          })
+        }
+      } : {
+        temperature: 0.7
+      })
     });
 
     const response = completion.choices[0].message.content;
+    const annotations = completion.choices[0].message.annotations;
+
     if (!response) {
       throw new Error('No response from OpenAI');
     }
 
-    return NextResponse.json({ response });
+    return NextResponse.json({ 
+      response,
+      annotations: annotations || []
+    });
   } catch (error) {
     console.error('Error in chat API:', error);
     return NextResponse.json(
