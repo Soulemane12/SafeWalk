@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.heat';
 import CrimeHeatmap from './CrimeHeatmap';
 import RouteSearch from './RouteSearch';
 
@@ -46,7 +47,67 @@ function LocationMarker() {
   );
 }
 
-export default function Map() {
+interface MapProps {
+  onRouteUpdate?: (routeData: any) => void;
+}
+
+const Map: React.FC<MapProps> = ({ onRouteUpdate }) => {
+  const [routeData, setRouteData] = useState<any>(null);
+  const initialRouteSet = useRef(false);
+
+  useEffect(() => {
+    if (initialRouteSet.current) return;
+    
+    // Example route data - replace with your actual route data
+    const exampleRoute = {
+      start: {
+        lat: 40.7128,
+        lng: -74.0060,
+        address: "Starting Point"
+      },
+      end: {
+        lat: 40.7589,
+        lng: -73.9851,
+        address: "Ending Point"
+      },
+      distance: "2.0 mi",
+      duration: "42 min 16 sec",
+      path: [
+        [40.7128, -74.0060],
+        [40.7589, -73.9851]
+      ],
+      safetyScore: 75,
+      highRiskAreas: [
+        {
+          lat: 40.7300,
+          lng: -73.9900,
+          risk: "medium",
+          description: "Area with moderate crime rate"
+        }
+      ],
+      wellLitAreas: [
+        {
+          lat: 40.7200,
+          lng: -73.9950,
+          description: "Well-lit commercial area"
+        }
+      ]
+    };
+
+    setRouteData(exampleRoute);
+    if (onRouteUpdate) {
+      onRouteUpdate(exampleRoute);
+    }
+    initialRouteSet.current = true;
+  }, []); // Empty dependency array since we only want to set initial route once
+
+  const handleRouteUpdate = (newRouteData: any) => {
+    setRouteData(newRouteData);
+    if (onRouteUpdate) {
+      onRouteUpdate(newRouteData);
+    }
+  };
+
   return (
     <div className="h-screen w-full">
       <MapContainer
@@ -55,13 +116,15 @@ export default function Map() {
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         <LocationMarker />
         <CrimeHeatmap />
-        <RouteSearch />
+        <RouteSearch onRouteUpdate={handleRouteUpdate} />
       </MapContainer>
     </div>
   );
-} 
+};
+
+export default Map; 

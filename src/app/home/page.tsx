@@ -90,6 +90,7 @@ export default function HomePage() {
               <div className="space-y-3">
                 {[
                   'Crime heatmap visualization to identify high-density areas',
+                  'AI-powered route assistant for real-time guidance',
                   'Community-driven safety ratings (future feature)',
                   'Route history saved locally for easy access',
                   'Clear visual markers for start and end points',
@@ -146,7 +147,8 @@ export default function HomePage() {
                     { name: 'Next.js 14', desc: 'React framework for server-side rendering' },
                     { name: 'TailwindCSS', desc: 'Utility-first CSS framework' },
                     { name: 'Leaflet.js', desc: 'Interactive maps library' },
-                    { name: 'TypeScript', desc: 'Static typing for better code quality' }
+                    { name: 'TypeScript', desc: 'Static typing for better code quality' },
+                    { name: 'AI Integration', desc: 'Real-time route assistance' }
                   ].map((tech, index) => (
                     <div key={index} className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full mt-2"></div>

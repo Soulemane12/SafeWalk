@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
 import { MapPin, Navigation, Clock, Route, History, Trash2, X, ArrowRight } from 'lucide-react';
+import { Marker, Popup } from 'react-leaflet';
 
 interface Location {
   display_name: string;
@@ -38,6 +39,10 @@ interface SavedRoute {
   transportMode: TransportMode;
   routeType: 'fastest' | 'safest';
   timestamp: number;
+}
+
+interface RouteSearchProps {
+  onRouteUpdate?: (routeData: any) => void;
 }
 
 // Custom marker icons
@@ -93,7 +98,7 @@ const endIcon = L.divIcon({
   iconAnchor: [10, 10]
 });
 
-export default function RouteSearch() {
+const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
   const map = useMap();
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
@@ -110,6 +115,8 @@ export default function RouteSearch() {
   const currentRouteRef = useRef<L.Polyline | null>(null);
   const startMarkerRef = useRef<L.Marker | null>(null);
   const endMarkerRef = useRef<L.Marker | null>(null);
+  const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
+  const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
 
   // Load saved routes from localStorage on component mount
   useEffect(() => {
@@ -399,6 +406,44 @@ export default function RouteSearch() {
       // Save the route after successful calculation
       saveRoute();
 
+      // Create route data object
+      const routeData = {
+        start: {
+          lat: start.lat,
+          lng: start.lon,
+          address: start.display_name
+        },
+        end: {
+          lat: end.lat,
+          lng: end.lon,
+          address: end.display_name
+        },
+        distance: formatDistance(chosen.distance),
+        duration: formatDuration(chosen.duration),
+        path: chosen.coords,
+        safetyScore: 75, // Calculate actual safety score
+        highRiskAreas: [
+          {
+            lat: 40.7300,
+            lng: -73.9900,
+            risk: "medium",
+            description: "Area with moderate crime rate"
+          }
+        ],
+        wellLitAreas: [
+          {
+            lat: 40.7200,
+            lng: -73.9950,
+            description: "Well-lit commercial area"
+          }
+        ]
+      };
+
+      // Pass route data to parent component
+      if (onRouteUpdate) {
+        onRouteUpdate(routeData);
+      }
+
     } catch (err: any) {
       console.error(err);
       alert(err.message || 'Failed to calculate route.');
@@ -418,6 +463,51 @@ export default function RouteSearch() {
   const getRouteTypeColor = (type: 'fastest' | 'safest') => {
     return type === 'fastest' ? 'from-blue-500 to-cyan-500' : 'from-green-500 to-emerald-500';
   };
+
+  const handleRouteUpdate = useCallback((start: [number, number], end: [number, number]) => {
+    if (startPoint === start && endPoint === end) return;
+
+    setStartPoint(start);
+    setEndPoint(end);
+
+    // Create route data object
+    const routeData = {
+      start: {
+        lat: start[0],
+        lng: start[1],
+        address: "Starting Point" // You can add geocoding here to get actual addresses
+      },
+      end: {
+        lat: end[0],
+        lng: end[1],
+        address: "Ending Point"
+      },
+      distance: "2.0 mi", // Calculate actual distance
+      duration: "42 min 16 sec", // Calculate actual duration
+      path: [start, end], // Add actual path points
+      safetyScore: 75, // Calculate actual safety score
+      highRiskAreas: [
+        {
+          lat: 40.7300,
+          lng: -73.9900,
+          risk: "medium",
+          description: "Area with moderate crime rate"
+        }
+      ],
+      wellLitAreas: [
+        {
+          lat: 40.7200,
+          lng: -73.9950,
+          description: "Well-lit commercial area"
+        }
+      ]
+    };
+
+    // Pass route data to parent component
+    if (onRouteUpdate) {
+      onRouteUpdate(routeData);
+    }
+  }, [onRouteUpdate, startPoint, endPoint]);
 
   return (
     <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] sm:w-[90%] md:max-w-lg transition-all duration-300 ${isMinimized ? '' : ''}`}>
@@ -744,6 +834,25 @@ export default function RouteSearch() {
           </div>
         </div>
       )}
+
+      {startPoint && (
+        <Marker position={startPoint}>
+          <Popup>
+            Starting Point
+          </Popup>
+        </Marker>
+      )}
+      {endPoint && (
+        <Marker position={endPoint}>
+          <Popup>
+            Ending Point
+          </Popup>
+        </Marker>
+      )}
     </div>
   );
-} 
+});
+
+RouteSearch.displayName = 'RouteSearch';
+
+export default RouteSearch; 

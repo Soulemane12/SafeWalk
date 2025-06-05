@@ -15,6 +15,7 @@ SafeWalk is a route planning application that helps users find the safest walkin
 - **Estimated Travel Time & Distance:** Get clear information about your planned journey.
 - **Responsive UI:** The application adapts to different screen sizes for a seamless mobile and desktop experience.
 - **Custom Markers:** Distinct visual markers for start and end locations.
+- **AI Route Assistant:** Get real-time guidance and safety recommendations from an AI assistant while planning your route.
 
 ## Technologies Used
 
@@ -24,6 +25,7 @@ SafeWalk is a route planning application that helps users find the safest walkin
   - TypeScript: Adds static typing for improved code quality and maintainability.
   - TailwindCSS: Utility-first CSS framework for rapid and responsive styling.
   - Leaflet.js: Open-source JavaScript library for creating interactive maps.
+  - AI Integration: Real-time route assistance and safety recommendations.
 
 - **Data & APIs:**
   - NYC Open Data (NYPD Complaint Data): Provides the crime statistics used for the heatmap and safest route calculations.

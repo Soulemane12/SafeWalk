@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  env: {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  },
+  images: {
+    domains: ['maps.googleapis.com', 'maps.gstatic.com'],
+  },
   async headers() {
     return [
       {
@@ -14,7 +21,12 @@ const nextConfig = {
     ];
   },
   webpack: (config) => {
-    config.resolve.fallback = { fs: false, path: false };
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
     return config;
   },
   allowedDevOrigins: [
