@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, JSX } from 'react';
 import { RouteAIService, UserLocation } from '@/lib/ai-service';
 
 interface RouteChatProps {
