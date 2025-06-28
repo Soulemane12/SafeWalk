@@ -21,6 +21,26 @@ const DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Custom blue dot icon for user location
+const UserLocationIcon = L.divIcon({
+  className: 'user-location-icon',
+  html: `
+    <div style="
+      background: radial-gradient(circle at 50% 50%, #3b82f6 70%, #1e40af 100%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    "></div>
+  `,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
 function LocationMarker() {
   const map = useMap();
   const [position, setPosition] = useState<L.LatLng | null>(null);
@@ -41,7 +61,7 @@ function LocationMarker() {
   }, [map]);
 
   return position === null ? null : (
-    <Marker position={position}>
+    <Marker position={position} icon={UserLocationIcon}>
       <Popup>You are here</Popup>
     </Marker>
   );

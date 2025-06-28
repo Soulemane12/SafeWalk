@@ -4,8 +4,9 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
-import { MapPin, Navigation, Clock, Route, History, Trash2, X, ArrowRight } from 'lucide-react';
+import { MapPin, Navigation, Clock, Route, History, Trash2, X, ArrowRight, Locate, ArrowUpDown, Mic } from 'lucide-react';
 import { Marker, Popup } from 'react-leaflet';
+import { RouteAIService } from '@/lib/ai-service';
 
 interface Location {
   display_name: string;
@@ -98,6 +99,71 @@ const endIcon = L.divIcon({
   iconAnchor: [10, 10]
 });
 
+// Add TypeScript interfaces for SpeechRecognition
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+  interpretation: string;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  grammars: any;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onaudioend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onaudiostart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
+  onnomatch: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onsoundend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onsoundstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onspeechend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onspeechstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+// Define SpeechRecognition constructor type
+interface SpeechRecognitionConstructor {
+  new(): SpeechRecognition;
+  prototype: SpeechRecognition;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: SpeechRecognitionConstructor;
+    webkitSpeechRecognition: SpeechRecognitionConstructor;
+  }
+}
+
 const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
   const map = useMap();
   const [startLocation, setStartLocation] = useState('');
@@ -112,11 +178,15 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
   const [showSavedRoutes, setShowSavedRoutes] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const currentRouteRef = useRef<L.Polyline | null>(null);
   const startMarkerRef = useRef<L.Marker | null>(null);
   const endMarkerRef = useRef<L.Marker | null>(null);
   const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
   const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [isProcessingSpeech, setIsProcessingSpeech] = useState(false);
+  const speechRecognition = useRef<SpeechRecognition | null>(null);
 
   // Load saved routes from localStorage on component mount
   useEffect(() => {
@@ -509,6 +579,153 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
     }
   }, [onRouteUpdate, startPoint, endPoint]);
 
+  // Get current location function
+  const getCurrentLocation = async (isStart: boolean) => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    setIsGettingLocation(true);
+    
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      
+      // Reverse geocode to get address
+      try {
+        const response = await axios.get(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+        );
+        
+        const address = response.data.display_name;
+        
+        if (isStart) {
+          setStartLocation(address);
+          setStartPoint([latitude, longitude]);
+        } else {
+          setEndLocation(address);
+          setEndPoint([latitude, longitude]);
+        }
+        
+        // Center map on the new location
+        map.setView([latitude, longitude], 15);
+        
+      } catch (error) {
+        // If reverse geocoding fails, use coordinates as fallback
+        const fallbackAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        
+        if (isStart) {
+          setStartLocation(fallbackAddress);
+          setStartPoint([latitude, longitude]);
+        } else {
+          setEndLocation(fallbackAddress);
+          setEndPoint([latitude, longitude]);
+        }
+        
+        map.setView([latitude, longitude], 15);
+      }
+      
+    } catch (error) {
+      console.error('Error getting location:', error);
+      alert('Unable to get your current location. Please check your browser permissions and try again.');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  // Switch locations function
+  const switchLocations = () => {
+    // Switch location strings
+    const tempLocation = startLocation;
+    setStartLocation(endLocation);
+    setEndLocation(tempLocation);
+    
+    // Switch coordinates
+    const tempPoint = startPoint;
+    setStartPoint(endPoint);
+    setEndPoint(tempPoint);
+    
+    // Switch suggestions
+    const tempSuggestions = startSuggestions;
+    setStartSuggestions(endSuggestions);
+    setEndSuggestions(tempSuggestions);
+    
+    // Clear current route since locations changed
+    clearCurrentRoute();
+    setRouteInfo(null);
+  };
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+      speechRecognition.current = new SpeechRecognitionAPI();
+      speechRecognition.current.continuous = false;
+      speechRecognition.current.interimResults = false;
+      speechRecognition.current.lang = 'en-US';
+
+      speechRecognition.current.onresult = async (event: SpeechRecognitionEvent) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice input:', transcript);
+        setIsListening(false);
+        setIsProcessingSpeech(true);
+        
+        try {
+          const locations = await RouteAIService.processVoiceInput(transcript);
+          if (locations) {
+            setStartLocation(locations.startLocation);
+            setEndLocation(locations.endLocation);
+            
+            // Set transport mode if specified
+            if (locations.transportMode) {
+              setTransportMode(locations.transportMode);
+            }
+            
+            // Set route type if specified
+            if (locations.routeType) {
+              setRouteType(locations.routeType);
+            }
+            
+            // Clear any existing suggestions
+            setStartSuggestions([]);
+            setEndSuggestions([]);
+          } else {
+            alert('Could not understand the locations. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error processing speech:', error);
+          alert('Error processing speech. Please try again.');
+        } finally {
+          setIsProcessingSpeech(false);
+        }
+      };
+
+      speechRecognition.current.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+        setIsProcessingSpeech(false);
+        alert('Error with speech recognition. Please try again or use text input.');
+      };
+    }
+  }, []);
+
+  const startVoiceInput = () => {
+    if (speechRecognition.current) {
+      setIsListening(true);
+      speechRecognition.current.start();
+    } else {
+      alert('Speech recognition is not supported in your browser.');
+    }
+  };
+
   return (
     <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] sm:w-[90%] md:max-w-lg transition-all duration-300 ${isMinimized ? '' : ''}`}>
       {/* Main Panel */}
@@ -543,6 +760,18 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
         {/* Minimized view */}
         {isMinimized && (
           <div className="mt-3 flex items-center gap-2">
+            <button
+              onClick={() => getCurrentLocation(true)}
+              disabled={isGettingLocation}
+              className="p-2 text-sm bg-blue-100 hover:bg-blue-200 rounded-xl text-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Set my location as start point"
+            >
+              {isGettingLocation ? (
+                <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+              ) : (
+                <Locate className="w-4 h-4" />
+              )}
+            </button>
             <select
               value={transportMode}
               onChange={(e) => setTransportMode(e.target.value as TransportMode)}
@@ -576,6 +805,32 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
 
         {/* Full view */}
         <div className={`space-y-4 sm:space-y-6 ${isMinimized ? 'hidden' : 'mt-4'}`}>
+          {/* Voice Input Button */}
+          <div className="flex justify-center">
+            <button
+              onClick={startVoiceInput}
+              disabled={isListening || isProcessingSpeech}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-white font-medium transition-all duration-200 shadow-md ${
+                isListening 
+                  ? 'bg-red-500 animate-pulse' 
+                  : isProcessingSpeech 
+                    ? 'bg-yellow-500' 
+                    : 'bg-blue-500 hover:bg-blue-600'
+              }`}
+            >
+              <Mic className="w-4 h-4" />
+              {isListening 
+                ? 'Listening...' 
+                : isProcessingSpeech 
+                  ? 'Processing...' 
+                  : ' '}
+            </button>
+            {!isListening && !isProcessingSpeech && (
+              <div className="text-xs text-gray-500 mt-1 text-center">
+              </div>
+            )}
+          </div>
+
           {/* Transport Mode & Route Type */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -645,8 +900,20 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
                   }}
                   onBlur={() => handleInputBlur(true)}
                   placeholder="Enter starting location"
-                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-sm border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                  className="w-full pl-10 pr-12 py-2.5 sm:py-3 text-sm border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
                 />
+                <button
+                  onClick={() => getCurrentLocation(true)}
+                  disabled={isGettingLocation}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 hover:bg-blue-50 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Use my current location"
+                >
+                  {isGettingLocation ? (
+                    <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+                  ) : (
+                    <Locate className="w-4 h-4 text-blue-600" />
+                  )}
+                </button>
               </div>
               {startSuggestions.length > 0 && (
                 <div className="absolute z-20 w-full mt-1 sm:mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-40 sm:max-h-48 overflow-y-auto">
@@ -665,6 +932,18 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
               )}
             </div>
 
+            {/* Switch Locations Button */}
+            <div className="flex justify-center">
+              <button
+                onClick={switchLocations}
+                disabled={!startLocation || !endLocation}
+                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                title="Switch start and end locations"
+              >
+                <ArrowUpDown className="w-4 h-4 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
+              </button>
+            </div>
+
             {/* End Location */}
             <div className="relative">
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">To</label>
@@ -681,8 +960,20 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
                   }}
                   onBlur={() => handleInputBlur(false)}
                   placeholder="Enter destination"
-                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-sm border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                  className="w-full pl-10 pr-12 py-2.5 sm:py-3 text-sm border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
                 />
+                <button
+                  onClick={() => getCurrentLocation(false)}
+                  disabled={isGettingLocation}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 hover:bg-blue-50 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Use my current location"
+                >
+                  {isGettingLocation ? (
+                    <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+                  ) : (
+                    <Locate className="w-4 h-4 text-blue-600" />
+                  )}
+                </button>
               </div>
               {endSuggestions.length > 0 && (
                 <div className="absolute z-20 w-full mt-1 sm:mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-40 sm:max-h-48 overflow-y-auto">
@@ -836,14 +1127,14 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
       )}
 
       {startPoint && (
-        <Marker position={startPoint}>
+        <Marker position={startPoint} icon={startIcon}>
           <Popup>
             Starting Point
           </Popup>
         </Marker>
       )}
       {endPoint && (
-        <Marker position={endPoint}>
+        <Marker position={endPoint} icon={endIcon}>
           <Popup>
             Ending Point
           </Popup>

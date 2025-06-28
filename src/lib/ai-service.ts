@@ -16,22 +16,6 @@ export interface RouteAnalysis {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  annotations?: Array<{
-    type: string;
-    url_citation?: {
-      url: string;
-      title: string;
-      start_index: number;
-      end_index: number;
-    };
-  }>;
-}
-
-export interface UserLocation {
-  country?: string;
-  city?: string;
-  region?: string;
-  timezone?: string;
 }
 
 export class RouteAIService {
@@ -118,23 +102,14 @@ export class RouteAIService {
     });
   }
 
-  static async analyzeRoute(
-    routeData: any, 
-    userQuestion: string, 
-    useWebSearch: boolean = false,
-    userLocation?: UserLocation
-  ): Promise<{ response: string; annotations?: ChatMessage['annotations'] }> {
+  static async analyzeRoute(routeData: any, userQuestion: string): Promise<string> {
     if (!openai.apiKey) {
       console.warn('OpenAI API key is not configured');
-      return {
-        response: "I apologize, but I'm currently unable to analyze routes as the AI service is not properly configured. Please check your environment variables."
-      };
+      return "I apologize, but I'm currently unable to analyze routes as the AI service is not properly configured. Please check your environment variables.";
     }
 
     if (!routeData) {
-      return {
-        response: "I apologize, but I don't have any route data to analyze. Please select a route first."
-      };
+      return "I apologize, but I don't have any route data to analyze. Please select a route first.";
     }
 
     return this.retryWithBackoff(async () => {
@@ -145,9 +120,7 @@ export class RouteAIService {
         },
         body: JSON.stringify({
           message: userQuestion,
-          routeData,
-          useWebSearch,
-          userLocation
+          routeData
         }),
       });
 
@@ -160,23 +133,14 @@ export class RouteAIService {
       if (!data.response) {
         throw new Error('Invalid response format');
       }
-      return {
-        response: data.response,
-        annotations: data.annotations
-      };
+      return data.response;
     });
   }
 
-  public async chat(
-    message: string,
-    useWebSearch: boolean = false,
-    userLocation?: UserLocation
-  ): Promise<{ response: string; annotations?: ChatMessage['annotations'] }> {
+  public async chat(message: string): Promise<string> {
     if (!openai.apiKey) {
       console.warn('OpenAI API key is not configured');
-      return {
-        response: "I apologize, but I'm currently unable to chat as the AI service is not properly configured. Please check your environment variables."
-      };
+      return "I apologize, but I'm currently unable to chat as the AI service is not properly configured. Please check your environment variables.";
     }
 
     try {
@@ -190,8 +154,6 @@ export class RouteAIService {
         body: JSON.stringify({
           message,
           chatHistory: this.chatHistory,
-          useWebSearch,
-          userLocation
         }),
       });
 
@@ -206,15 +168,8 @@ export class RouteAIService {
       }
       
       const reply = data.response;
-      this.chatHistory.push({ 
-        role: 'assistant', 
-        content: reply,
-        annotations: data.annotations
-      });
-      return {
-        response: reply,
-        annotations: data.annotations
-      };
+      this.chatHistory.push({ role: 'assistant', content: reply });
+      return reply;
     } catch (error) {
       console.error('Error in chat:', error);
       throw error;
@@ -228,5 +183,41 @@ export class RouteAIService {
       insights: ['Sample insight 1', 'Sample insight 2'],
       recommendations: ['Sample recommendation 1', 'Sample recommendation 2'],
     };
+  }
+
+  static async processVoiceInput(transcription: string): Promise<{ 
+    startLocation: string; 
+    endLocation: string;
+    transportMode?: 'walking' | 'cycling' | 'driving';
+    routeType?: 'fastest' | 'safest';
+  } | null> {
+    if (!openai.apiKey) {
+      console.warn('OpenAI API key is not configured');
+      return null;
+    }
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: transcription,
+          isVoiceProcessing: true
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to process voice input');
+      }
+
+      const data = await response.json();
+      return data.locations;
+    } catch (error) {
+      console.error('Error processing voice input:', error);
+      return null;
+    }
   }
 } 

@@ -14,6 +14,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@shadcn/ui": "^0.0.4",
     "@types/mapbox-gl": "^3.4.1",
+    "@types/ws": "^8.18.1",
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -22,12 +23,15 @@
     "lucide-react": "^0.511.0",
     "mapbox-gl": "^3.12.0",
     "next": "15.3.2",
-    "openai": "^5.1.1",
+    "openai": "^5.8.2",
+    "openai-realtime-api": "^1.0.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
     "tailwind-merge": "^3.3.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "ws": "^8.18.3",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

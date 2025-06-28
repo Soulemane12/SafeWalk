@@ -16,13 +16,61 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { message, routeData, isGeneratingQuestions, useWebSearch, userLocation } = await req.json();
+    const { message, routeData, isGeneratingQuestions, isVoiceProcessing } = await req.json();
 
-    if (!routeData) {
+    if (!routeData && !isVoiceProcessing) {
       return NextResponse.json(
         { error: 'Route data is required' },
         { status: 400 }
       );
+    }
+
+    if (isVoiceProcessing) {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a voice processing assistant for a navigation app. 
+            Extract the following information from the user's voice input:
+            1. Start location
+            2. End location
+            3. Transport mode (walking, cycling, driving) - default to walking if not specified
+            4. Route priority (safest, fastest) - default to fastest if not specified
+            
+            Return ONLY a JSON object with the following properties:
+            - "startLocation": string with the starting location
+            - "endLocation": string with the destination
+            - "transportMode": string with one of: "walking", "cycling", "driving"
+            - "routeType": string with one of: "safest", "fastest"
+            
+            If you can't identify both locations, make your best guess based on context.
+            Example: {"startLocation": "123 Main Street", "endLocation": "Central Park", "transportMode": "walking", "routeType": "fastest"}`
+          },
+          {
+            role: "user",
+            content: message
+          }
+        ],
+        max_tokens: 150,
+        temperature: 0.3,
+      });
+
+      const content = completion.choices[0].message.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
+      }
+
+      try {
+        const locations = JSON.parse(content);
+        return NextResponse.json({ locations });
+      } catch (e) {
+        // If parsing fails, return an error
+        return NextResponse.json(
+          { error: 'Failed to parse locations from voice input' },
+          { status: 500 }
+        );
+      }
     }
 
     if (isGeneratingQuestions) {
@@ -74,7 +122,7 @@ export async function POST(req: Request) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: useWebSearch ? "gpt-4o-search-preview" : "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -100,32 +148,15 @@ export async function POST(req: Request) {
         }
       ],
       max_tokens: 1000,
-      ...(useWebSearch ? {
-        web_search_options: {
-          search_context_size: "medium",
-          ...(userLocation && {
-            user_location: {
-              type: "approximate",
-              approximate: userLocation
-            }
-          })
-        }
-      } : {
-        temperature: 0.7
-      })
+      temperature: 0.7,
     });
 
     const response = completion.choices[0].message.content;
-    const annotations = completion.choices[0].message.annotations;
-
     if (!response) {
       throw new Error('No response from OpenAI');
     }
 
-    return NextResponse.json({ 
-      response,
-      annotations: annotations || []
-    });
+    return NextResponse.json({ response });
   } catch (error) {
     console.error('Error in chat API:', error);
     return NextResponse.json(

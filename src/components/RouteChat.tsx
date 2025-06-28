@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, JSX } from 'react';
-import { RouteAIService, UserLocation } from '@/lib/ai-service';
+import React, { useState, useEffect, useRef } from 'react';
+import { RouteAIService } from '@/lib/ai-service';
 
 interface RouteChatProps {
   routeData?: {
@@ -31,22 +31,8 @@ interface RouteChatProps {
   };
 }
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  annotations?: Array<{
-    type: string;
-    url_citation?: {
-      url: string;
-      title: string;
-      start_index: number;
-      end_index: number;
-    };
-  }>;
-}
-
 export const RouteChat: React.FC<RouteChatProps> = ({ routeData }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
     {
       role: 'assistant',
       content: routeData 
@@ -76,8 +62,6 @@ Once you select a route, I'll provide personalized safety recommendations!`
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [useWebSearch, setUseWebSearch] = useState(false);
-  const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
@@ -123,17 +107,8 @@ Once you select a route, I'll provide personalized safety recommendations!`
     setIsLoading(true);
 
     try {
-      const { response, annotations } = await RouteAIService.analyzeRoute(
-        routeData, 
-        userMessage,
-        useWebSearch,
-        userLocation
-      );
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: response,
-        annotations
-      }]);
+      const response = await RouteAIService.analyzeRoute(routeData, userMessage);
+      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages(prev => [...prev, { 
@@ -145,82 +120,21 @@ Once you select a route, I'll provide personalized safety recommendations!`
     }
   };
 
-  const renderMessageContent = (message: ChatMessage) => {
-    if (!message.annotations?.length) {
-      return message.content.split('\n').map((line, i) => (
-        <p key={i} className="mb-3 last:mb-0 text-base leading-relaxed">
-          {line}
-        </p>
-      ));
-    }
-
-    const content = message.content;
-    const annotations = message.annotations;
-    const elements: JSX.Element[] = [];
-    let lastIndex = 0;
-
-    annotations.forEach((annotation, index) => {
-      if (annotation.type === 'url_citation' && annotation.url_citation) {
-        const { start_index, end_index, url, title } = annotation.url_citation;
-        
-        // Add text before the citation
-        if (start_index > lastIndex) {
-          elements.push(
-            <span key={`text-${index}`}>
-              {content.slice(lastIndex, start_index)}
-            </span>
-          );
-        }
-
-        // Add the citation as a link
-        elements.push(
-          <a
-            key={`link-${index}`}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-600 underline"
-            title={title}
-          >
-            {content.slice(start_index, end_index)}
-          </a>
-        );
-
-        lastIndex = end_index;
-      }
-    });
-
-    // Add any remaining text
-    if (lastIndex < content.length) {
-      elements.push(
-        <span key="text-end">
-          {content.slice(lastIndex)}
-        </span>
-      );
-    }
-
-    return elements.map((element, i) => (
-      <p key={i} className="mb-3 last:mb-0 text-base leading-relaxed">
-        {element}
-      </p>
-    ));
-  };
-
   return (
     <div 
       ref={chatRef}
-      className={`fixed bottom-4 right-4 w-[600px] transition-all duration-300 ease-in-out transform ${
+      className={`fixed bottom-3 right-3 w-[400px] transition-all duration-300 ease-in-out transform ${
         isCollapsed ? 'translate-y-[calc(100%-48px)]' : 'translate-y-0'
       }`}
     >
-      <div className="flex flex-col h-[800px] bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+      <div className="flex flex-col h-[520px] bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
         <div 
-          className="p-5 border-b bg-gradient-to-r from-blue-500 to-blue-600 cursor-pointer"
+          className="p-3 border-b bg-gradient-to-r from-blue-500 to-blue-600 cursor-pointer"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-white flex items-center gap-3">
-              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
               Route Safety Assistant
@@ -233,7 +147,7 @@ Once you select a route, I'll provide personalized safety recommendations!`
               }}
             >
               <svg 
-                className={`w-7 h-7 transform transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} 
+                className={`w-5 h-5 transform transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -244,23 +158,10 @@ Once you select a route, I'll provide personalized safety recommendations!`
           </div>
         </div>
 
-        <div className={`flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50 transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl p-5 shadow-sm ${
-                  message.role === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-800 border border-gray-200'
-                }`}
-              >
-                <div className="prose prose-sm">
-                  {renderMessageContent(message)}
-                </div>
-              </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-2 text-sm">
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`rounded-lg px-3 py-2 max-w-[80%] ${msg.role === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-800'}`}>{msg.content}</div>
             </div>
           ))}
           {isLoading && (
@@ -278,22 +179,22 @@ Once you select a route, I'll provide personalized safety recommendations!`
         </div>
 
         {suggestedQuestions.length > 0 && (
-          <div className={`p-4 border-t bg-white transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className={`p-2 border-t bg-white transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+            <div className="flex items-center gap-1 mb-1">
+              <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-sm font-medium text-gray-500">Quick Questions</span>
+              <span className="text-xs font-medium text-gray-500">Quick Questions</span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               {suggestedQuestions.map((question, index) => (
                 <button
                   key={index}
                   onClick={() => setInput(question)}
-                  className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded-full transition-colors duration-200 flex items-center gap-2"
+                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-1 rounded-full transition-colors duration-200 flex items-center gap-1"
                 >
-                  <span className="truncate max-w-[200px]">{question}</span>
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <span className="truncate max-w-[120px]">{question}</span>
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
@@ -302,19 +203,8 @@ Once you select a route, I'll provide personalized safety recommendations!`
           </div>
         )}
 
-        <div className={`p-4 border-t bg-white transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={useWebSearch}
-                onChange={(e) => setUseWebSearch(e.target.checked)}
-                className="w-4 h-4 text-blue-500 rounded focus:ring-blue-500"
-              />
-              Enable web search
-            </label>
-          </div>
-          <div className="flex gap-3">
+        <div className={`p-2 border-t bg-white transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+          <div className="flex gap-2">
             <input
               type="text"
               value={input}
@@ -322,15 +212,15 @@ Once you select a route, I'll provide personalized safety recommendations!`
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder={routeData ? "Ask about your route..." : "Select a route first..."}
               disabled={!routeData}
-              className="flex-1 px-5 py-3.5 text-base border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200"
+              className="flex-1 px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200"
             />
             <button
               onClick={handleSendMessage}
               disabled={isLoading || !routeData}
-              className="px-7 py-3.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-3 text-base font-medium"
+              className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 text-xs font-medium"
             >
               <span>Send</span>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>

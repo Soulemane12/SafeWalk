@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Shield, MapPin, Clock, Users, Zap, Navigation, Eye } from 'lucide-react';
+import { Check, Shield, MapPin, Clock, Users, Zap, Navigation, Eye, Mic } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -64,7 +64,9 @@ export default function HomePage() {
                   'Multiple transport options: walking, cycling, and driving', 
                   'Fastest route: optimized for shortest distance',
                   'Safest route: intelligently avoids high-crime areas',
-                  'Estimated travel time and distance'
+                  'Estimated travel time and distance',
+                  'Voice commands for hands-free navigation',
+                  'Save routes for quick access later'
                 ].map((feature, index) => (
                   <div key={index} className="flex items-start gap-3">
                     <div className="p-1 bg-green-400/20 rounded-full mt-1">
@@ -91,10 +93,11 @@ export default function HomePage() {
                 {[
                   'Crime heatmap visualization to identify high-density areas',
                   'AI-powered route assistant for real-time guidance',
-                  'Community-driven safety ratings (future feature)',
+                  'Interactive safety chat assistant',
                   'Route history saved locally for easy access',
                   'Clear visual markers for start and end points',
-                  'Responsive design for seamless use on any device'
+                  'Responsive design for seamless use on any device',
+                  'Switch between map views and safety overlays'
                 ].map((feature, index) => (
                   <div key={index} className="flex items-start gap-3">
                     <div className="p-1 bg-green-400/20 rounded-full mt-1">
@@ -103,6 +106,70 @@ export default function HomePage() {
                     <span className="text-gray-200">{feature}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Voice Commands Feature */}
+          <div className="bg-white/10 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/20 mb-16">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-400 to-indigo-500 text-white font-semibold px-4 py-2 rounded-full mb-4">
+                <Mic className="w-4 h-4" />
+                New Feature
+              </div>
+              <h3 className="text-3xl font-bold text-white mb-4">Voice-Powered Navigation</h3>
+              <p className="text-gray-200 text-lg max-w-2xl mx-auto">
+                Plan your route hands-free with our new voice command feature. Simply speak your start and end locations, preferred transport mode, and route priority.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
+                <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full"></div>
+                  Example Voice Commands
+                </h4>
+                <div className="space-y-3">
+                  {[
+                    "From Central Park to Times Square by bike, safest route",
+                    "Walking directions from my location to Empire State Building",
+                    "Fastest driving route from Brooklyn Bridge to Chinatown",
+                    "Take me from Grand Central to Bryant Park, walking, safest path"
+                  ].map((command, index) => (
+                    <div key={index} className="flex items-start gap-3 bg-white/5 p-3 rounded-xl">
+                      <div className="p-1.5 bg-indigo-400/20 rounded-full mt-0.5">
+                        <Mic className="w-3.5 h-3.5 text-indigo-400" />
+                      </div>
+                      <span className="text-gray-200 italic">"{command}"</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
+                <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
+                  AI-Powered Understanding
+                </h4>
+                <p className="text-gray-200 mb-4">
+                  Our advanced AI can understand natural language and extract:
+                </p>
+                <div className="space-y-3">
+                  {[
+                    { name: 'Start Location', desc: 'Where your journey begins' },
+                    { name: 'End Location', desc: 'Your destination' },
+                    { name: 'Transport Mode', desc: 'Walking, cycling, or driving' },
+                    { name: 'Route Priority', desc: 'Fastest or safest path' }
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full mt-2"></div>
+                      <div>
+                        <span className="text-white font-medium">{item.name}</span>
+                        <span className="text-gray-300">: {item.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
