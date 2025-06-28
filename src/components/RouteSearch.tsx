@@ -686,8 +686,19 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
         try {
           const locations = await RouteAIService.processVoiceInput(transcript);
           if (locations) {
-            setStartLocation(locations.startLocation);
-            setEndLocation(locations.endLocation);
+            // Handle current location for start point
+            if (locations.startLocation === "USE_CURRENT_LOCATION") {
+              await getCurrentLocation(true); // Get current location for start point
+            } else {
+              setStartLocation(locations.startLocation);
+            }
+            
+            // Handle current location for end point
+            if (locations.endLocation === "USE_CURRENT_LOCATION") {
+              await getCurrentLocation(false); // Get current location for end point
+            } else {
+              setEndLocation(locations.endLocation);
+            }
             
             // Set transport mode if specified
             if (locations.transportMode) {

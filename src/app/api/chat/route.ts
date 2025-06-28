@@ -38,14 +38,17 @@ export async function POST(req: Request) {
             3. Transport mode (walking, cycling, driving) - default to walking if not specified
             4. Route priority (safest, fastest) - default to fastest if not specified
             
+            IMPORTANT: If the user mentions "my location", "current location", "where I am", or similar phrases for either the start or end location, 
+            set the corresponding location value to exactly "USE_CURRENT_LOCATION".
+            
             Return ONLY a JSON object with the following properties:
-            - "startLocation": string with the starting location
-            - "endLocation": string with the destination
+            - "startLocation": string with the starting location (or "USE_CURRENT_LOCATION")
+            - "endLocation": string with the destination (or "USE_CURRENT_LOCATION")
             - "transportMode": string with one of: "walking", "cycling", "driving"
             - "routeType": string with one of: "safest", "fastest"
             
             If you can't identify both locations, make your best guess based on context.
-            Example: {"startLocation": "123 Main Street", "endLocation": "Central Park", "transportMode": "walking", "routeType": "fastest"}`
+            Example: {"startLocation": "USE_CURRENT_LOCATION", "endLocation": "Central Park", "transportMode": "walking", "routeType": "fastest"}`
           },
           {
             role: "user",
