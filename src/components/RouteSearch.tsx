@@ -702,6 +702,11 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
             // Clear any existing suggestions
             setStartSuggestions([]);
             setEndSuggestions([]);
+            
+            // Wait for state updates to complete, then automatically calculate route
+            setTimeout(() => {
+              calculateRoute();
+            }, 300);
           } else {
             alert('Could not understand the locations. Please try again.');
           }
