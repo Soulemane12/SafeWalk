@@ -514,6 +514,11 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
         onRouteUpdate(routeData);
       }
 
+      // Automatically minimize the route planner after successful route calculation
+      setTimeout(() => {
+        setIsMinimized(true);
+      }, 500); // Delay minimizing by 1 second to let the user see the route info first
+
     } catch (err: any) {
       console.error(err);
       alert(err.message || 'Failed to calculate route.');
