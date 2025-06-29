@@ -717,6 +717,10 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
             // Wait for state updates to complete, then automatically calculate route
             setTimeout(() => {
               calculateRoute();
+              // Automatically minimize the route planner after voice command processing
+              setTimeout(() => {
+                setIsMinimized(true);
+              }, 1500);
             }, 300);
           } else {
             alert('Could not understand the locations. Please try again.');
@@ -828,28 +832,31 @@ const RouteSearch: React.FC<RouteSearchProps> = memo(({ onRouteUpdate }) => {
         <div className={`space-y-4 sm:space-y-6 ${isMinimized ? 'hidden' : 'mt-4'}`}>
           {/* Voice Input Button */}
           <div className="flex justify-center">
-            <button
-              onClick={startVoiceInput}
-              disabled={isListening || isProcessingSpeech}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-white font-medium transition-all duration-200 shadow-md ${
-                isListening 
-                  ? 'bg-red-500 animate-pulse' 
+            <div className="flex flex-col items-center">
+              <button
+                onClick={startVoiceInput}
+                disabled={isListening || isProcessingSpeech}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-white font-medium transition-all duration-200 shadow-md ${
+                  isListening 
+                    ? 'bg-red-500 animate-pulse' 
+                    : isProcessingSpeech 
+                      ? 'bg-yellow-500' 
+                      : 'bg-blue-500 hover:bg-blue-600'
+                }`}
+              >
+                <Mic className="w-4 h-4" />
+                {isListening 
+                  ? 'Listening...' 
                   : isProcessingSpeech 
-                    ? 'bg-yellow-500' 
-                    : 'bg-blue-500 hover:bg-blue-600'
-              }`}
-            >
-              <Mic className="w-4 h-4" />
-              {isListening 
-                ? 'Listening...' 
-                : isProcessingSpeech 
-                  ? 'Processing...' 
-                  : ' '}
-            </button>
-            {!isListening && !isProcessingSpeech && (
-              <div className="text-xs text-gray-500 mt-1 text-center">
-              </div>
-            )}
+                    ? 'Processing...' 
+                    : 'Voice Command'}
+              </button>
+              {!isListening && !isProcessingSpeech && (
+                <div className="text-xs text-gray-500 mt-1 text-center max-w-[200px]">
+                  Try saying: "from my location to Times Square, safest route by bike"
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Transport Mode & Route Type */}

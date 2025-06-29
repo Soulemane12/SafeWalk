@@ -26,19 +26,45 @@ const UserLocationIcon = L.divIcon({
   className: 'user-location-icon',
   html: `
     <div style="
-      background: radial-gradient(circle at 50% 50%, #3b82f6 70%, #1e40af 100%);
+      background: radial-gradient(circle at 50% 50%, #3b82f6 30%, #2563eb 100%);
       width: 18px;
       height: 18px;
       border-radius: 50%;
       border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    "></div>
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5), 0 0 8px rgba(59, 130, 246, 0.7);
+      position: relative;
+    ">
+      <div style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 6px;
+        height: 6px;
+        background-color: white;
+        border-radius: 50%;
+      "></div>
+      <div style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid rgba(59, 130, 246, 0.4);
+        animation: pulse 2s infinite;
+      "></div>
+    </div>
+    <style>
+      @keyframes pulse {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+      }
+    </style>
   `,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
 function LocationMarker() {

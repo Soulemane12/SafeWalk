@@ -131,9 +131,9 @@ export default function HomePage() {
                 </h4>
                 <div className="space-y-3">
                   {[
-                    "From Central Park to Times Square by bike, safest route",
-                    "Walking directions from my location to Empire State Building",
-                    "Fastest driving route from Brooklyn Bridge to Chinatown",
+                    "From my location to Times Square by bike, safest route",
+                    "Walking directions from current location to Empire State Building",
+                    "Fastest driving route from Brooklyn Bridge to my current location",
                     "Take me from Grand Central to Bryant Park, walking, safest path"
                   ].map((command, index) => (
                     <div key={index} className="flex items-start gap-3 bg-white/5 p-3 rounded-xl">
@@ -149,17 +149,17 @@ export default function HomePage() {
               <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
                 <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
                   <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
-                  AI-Powered Understanding
+                  Smart Location Recognition
                 </h4>
                 <p className="text-gray-200 mb-4">
-                  Our advanced AI can understand natural language and extract:
+                  Our intelligent voice system can understand:
                 </p>
                 <div className="space-y-3">
                   {[
-                    { name: 'Start Location', desc: 'Where your journey begins' },
-                    { name: 'End Location', desc: 'Your destination' },
-                    { name: 'Transport Mode', desc: 'Walking, cycling, or driving' },
-                    { name: 'Route Priority', desc: 'Fastest or safest path' }
+                    { name: 'Current Location', desc: 'Uses phrases like "my location", "where I am", "current location"' },
+                    { name: 'Specific Addresses', desc: 'Street addresses, landmarks, neighborhoods' },
+                    { name: 'Transport Modes', desc: 'Walking, cycling, or driving preferences' },
+                    { name: 'Route Priorities', desc: 'Choose between fastest time or safest path' }
                   ].map((item, index) => (
                     <div key={index} className="flex items-start gap-3">
                       <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full mt-2"></div>
@@ -169,6 +169,12 @@ export default function HomePage() {
                       </div>
                     </div>
                   ))}
+                </div>
+                
+                <div className="mt-6 p-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl border border-blue-500/30">
+                  <p className="text-white text-sm">
+                    <span className="font-semibold">Pro tip:</span> Say "my location" or "current location" to use your current GPS position as either the starting point or destination!
+                  </p>
                 </div>
               </div>
             </div>
@@ -247,6 +253,61 @@ export default function HomePage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Route Planning Algorithm */}
+            <div className="mt-8 bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
+              <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                Route Planning Algorithm
+              </h4>
+              <p className="text-gray-200 mb-4">
+                Our intelligent route planning system balances safety and speed using a sophisticated algorithm:
+              </p>
+              <div className="space-y-4">
+                <div className="bg-white/5 p-4 rounded-xl">
+                  <h5 className="text-white font-semibold mb-2">Fastest Routes</h5>
+                  <p className="text-gray-300 text-sm">
+                    Uses OpenStreetMap Routing Machine (OSRM) API to calculate the shortest path between two points, optimized for your chosen transportation mode.
+                  </p>
+                </div>
+                
+                <div className="bg-white/5 p-4 rounded-xl">
+                  <h5 className="text-white font-semibold mb-2">Safest Routes</h5>
+                  <p className="text-gray-300 text-sm">
+                    Evaluates multiple route alternatives by calculating crime density along each path. The algorithm:
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    <li className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-400 rounded-full mt-2"></div>
+                      <span className="text-gray-300 text-sm">Samples points along each potential route</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-400 rounded-full mt-2"></div>
+                      <span className="text-gray-300 text-sm">Assigns higher weights to violent crimes (assault, robbery: 8x) and property crimes (burglary, theft: 5x)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-400 rounded-full mt-2"></div>
+                      <span className="text-gray-300 text-sm">Calculates overall crime exposure, maximum crime density points, and average crime density</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-400 rounded-full mt-2"></div>
+                      <span className="text-gray-300 text-sm">Applies a small distance penalty to avoid extremely long detours</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-400 rounded-full mt-2"></div>
+                      <span className="text-gray-300 text-sm">Selects the route with the lowest overall safety risk score</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                <div className="bg-white/5 p-4 rounded-xl">
+                  <h5 className="text-white font-semibold mb-2">Crime Data Visualization</h5>
+                  <p className="text-gray-300 text-sm">
+                    The heatmap visualizes crime density from blue (low) to red (high danger), with intensity weighted by crime type. This provides visual context for the route planning decisions.
+                  </p>
                 </div>
               </div>
             </div>
